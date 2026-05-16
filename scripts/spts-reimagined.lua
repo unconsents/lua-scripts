@@ -5,7 +5,6 @@ local _re=RS:WaitForChild("RemoteEvents")
 local _lp=PL.LocalPlayer
 local _pg=_lp:WaitForChild("PlayerGui")
 
-if _G.__sr then _G.__sr:Disconnect() end
 if _G.__sc then _G.__sc:Disconnect() end
 if _G.__sg then _G.__sg:Disconnect() end
 if _G.__si and _G.__si.Parent then _G.__si:Destroy() end
@@ -50,7 +49,7 @@ local function _alive()
 	return r~=nil and r:IsDescendantOf(workspace)
 end
 
-local _rdb,_lch=false,_lp.Character
+local _rdb=false
 
 local function _rfr()
 	if _rdb then return end
@@ -63,12 +62,23 @@ local function _rfr()
 	end)
 end
 
-_G.__sr=RU.Heartbeat:Connect(function()
-	local c=_lp.Character
-	if c and c~=_lch then _lch=c;_rfr() end
-end)
-_G.__sc=_lp.CharacterAdded:Connect(function(c)
-	if c~=_lch then _lch=c;_rfr() end
+local function _hookHealth(char)
+	local hum=char:WaitForChild("Humanoid",5)
+	if not hum then return end
+	hum:GetPropertyChangedSignal("Health"):Connect(function()
+		if hum.Health<50 then
+			_rfr()
+		end
+	end)
+end
+
+local _initChar=workspace:FindFirstChild(_lp.Name)
+if _initChar then
+	task.spawn(function() _hookHealth(_initChar) end)
+end
+
+_G.__sc=_lp.CharacterAdded:Connect(function(char)
+	task.spawn(function() _hookHealth(char) end)
 end)
 
 task.spawn(function()
