@@ -4,10 +4,14 @@ local RS,PL,RU,TS,UI=_svc.ReplicatedStorage,_svc.Players,_svc.RunService,_svc.Tw
 local _re=RS:WaitForChild("RemoteEvents")
 local _lp=PL.LocalPlayer
 local _pg=_lp:WaitForChild("PlayerGui")
+local _cam=workspace.CurrentCamera
 
 if _G.__sc then _G.__sc:Disconnect() end
 if _G.__sg then _G.__sg:Disconnect() end
 if _G.__si and _G.__si.Parent then _G.__si:Destroy() end
+if _G.__ehl then pcall(_G.__ehl) end
+if _G.__esk then pcall(_G.__esk) end
+if _G.__enm then pcall(_G.__enm) end
 
 local _C={
 	o=Color3.fromRGB(255,120,0),od=Color3.fromRGB(35,15,0),ol=Color3.fromRGB(50,20,0),
@@ -18,7 +22,7 @@ local _C={
 	tb=Color3.fromRGB(18,18,18),
 }
 
-local _TH={auto=323,trolls=162,races=275,misc=162}
+local _TH={auto=323,trolls=162,races=275,visuals=250,misc=162}
 local _CH=44
 
 local _D={
@@ -27,6 +31,9 @@ local _D={
 }
 
 local _am,_dt,_ca,_so,_scp,_sra,_rra="none","p1",false,true,nil,false,false
+local _hlOn,_hlConns,_hlInsts=false,{},{}
+local _skOn,_skRconn,_skGui,_skData=false,nil,nil,{}
+local _nmOn,_nmConns,_nmInsts=false,{},{}
 
 local function _tgt()
 	if _am=="p1" then return _D.p1
@@ -34,12 +41,10 @@ local function _tgt()
 	elseif _am=="dual" then return _D[_dt] end
 	return nil
 end
-
 local function _chk()
 	if not _so then return true end
 	return #PL:GetPlayers()<=1
 end
-
 local function _alive()
 	local c=_lp.Character
 	if not c or not c:IsDescendantOf(workspace) then return false end
@@ -51,7 +56,6 @@ local function _alive()
 end
 
 local _rdb=false
-
 local function _rfr()
 	if _rdb then return end
 	_rdb=true
@@ -62,7 +66,6 @@ local function _rfr()
 		_rdb=false
 	end)
 end
-
 local function _hookHealth(char)
 	local hum=char:WaitForChild("Humanoid",5)
 	if not hum then return end
@@ -70,18 +73,13 @@ local function _hookHealth(char)
 		if hum.Health<50 then _rfr() end
 	end)
 end
-
-local _initChar=workspace:FindFirstChild(_lp.Name)
-if _initChar then task.spawn(function() _hookHealth(_initChar) end) end
-
-_G.__sc=_lp.CharacterAdded:Connect(function(char)
-	task.spawn(function() _hookHealth(char) end)
-end)
+local _ic=workspace:FindFirstChild(_lp.Name)
+if _ic then task.spawn(function() _hookHealth(_ic) end) end
+_G.__sc=_lp.CharacterAdded:Connect(function(c) task.spawn(function() _hookHealth(c) end) end)
 
 task.spawn(function()
 	while true do task.wait(2);if _am=="dual" then _dt=_dt=="p1" and "p2" or "p1" end end
 end)
-
 task.spawn(function()
 	while true do
 		if _alive() and _chk() then
@@ -91,7 +89,6 @@ task.spawn(function()
 		task.wait(1)
 	end
 end)
-
 task.spawn(function()
 	while true do
 		if _alive() and _chk() then
@@ -101,7 +98,6 @@ task.spawn(function()
 		task.wait()
 	end
 end)
-
 task.spawn(function()
 	while true do
 		task.wait()
@@ -128,7 +124,6 @@ local function _fza(s)
 end
 local function _ufz(h) local b=h:FindFirstChild("__bpfz");if b then b.Position=h.Position end end
 local function _ace() for _,n in ipairs(_cn) do if workspace:FindFirstChild(n) then return true end end return false end
-
 local function _stcr()
 	local h=_hrp();if h then _scp=h.CFrame end
 	_ca=true
@@ -176,6 +171,197 @@ local function _getRace()
 	return nil
 end
 
+local function _addHL(p)
+	if p==_lp then return end
+	task.spawn(function()
+		local char=p.Character or p.CharacterAdded:Wait()
+		if not _hlOn then return end
+		if _hlInsts[p.Name] then pcall(function() _hlInsts[p.Name]:Destroy() end) end
+		local hl=Instance.new("Highlight")
+		hl.FillTransparency=1
+		hl.OutlineTransparency=0
+		hl.OutlineColor=Color3.fromRGB(255,255,255)
+		hl.Adornee=char
+		hl.Parent=char
+		_hlInsts[p.Name]=hl
+	end)
+end
+local function _stopHL()
+	_hlOn=false
+	for _,c in pairs(_hlConns) do pcall(function() c:Disconnect() end) end
+	_hlConns={}
+	for _,h in pairs(_hlInsts) do pcall(function() h:Destroy() end) end
+	_hlInsts={}
+end
+local function _startHL()
+	_hlOn=true
+	for _,p in ipairs(PL:GetPlayers()) do
+		_addHL(p)
+		if _hlConns["c"..p.Name] then _hlConns["c"..p.Name]:Disconnect() end
+		_hlConns["c"..p.Name]=p.CharacterAdded:Connect(function()
+			if _hlOn then task.wait(0.5);_addHL(p) end
+		end)
+	end
+	_hlConns["pa"]=PL.PlayerAdded:Connect(function(p)
+		if not _hlOn then return end
+		_addHL(p)
+		_hlConns["c"..p.Name]=p.CharacterAdded:Connect(function()
+			if _hlOn then task.wait(0.5);_addHL(p) end
+		end)
+	end)
+	_hlConns["pr"]=PL.PlayerRemoving:Connect(function(p)
+		if _hlInsts[p.Name] then pcall(function() _hlInsts[p.Name]:Destroy() end);_hlInsts[p.Name]=nil end
+		if _hlConns["c"..p.Name] then _hlConns["c"..p.Name]:Disconnect();_hlConns["c"..p.Name]=nil end
+	end)
+end
+
+local _R15B={
+	{"Head","UpperTorso"},{"UpperTorso","LowerTorso"},
+	{"UpperTorso","LeftUpperArm"},{"LeftUpperArm","LeftLowerArm"},{"LeftLowerArm","LeftHand"},
+	{"UpperTorso","RightUpperArm"},{"RightUpperArm","RightLowerArm"},{"RightLowerArm","RightHand"},
+	{"LowerTorso","LeftUpperLeg"},{"LeftUpperLeg","LeftLowerLeg"},{"LeftLowerLeg","LeftFoot"},
+	{"LowerTorso","RightUpperLeg"},{"RightUpperLeg","RightLowerLeg"},{"RightLowerLeg","RightFoot"},
+}
+local _R6B={
+	{"Head","Torso"},{"Torso","Left Arm"},{"Torso","Right Arm"},
+	{"Torso","Left Leg"},{"Torso","Right Leg"},
+}
+local _MB=20
+
+local function _stopSK()
+	_skOn=false
+	if _skRconn then _skRconn:Disconnect();_skRconn=nil end
+	if _skGui then _skGui:Destroy();_skGui=nil end
+	_skData={}
+end
+local function _startSK()
+	_skOn=true
+	_skGui=Instance.new("ScreenGui")
+	_skGui.Name="__sk"..tostring(math.random(100,999))
+	_skGui.ResetOnSpawn=false
+	_skGui.ZIndexBehavior=Enum.ZIndexBehavior.Sibling
+	_skGui.IgnoreGuiInset=true
+	_skGui.Parent=_pg
+	_skRconn=RU.RenderStepped:Connect(function()
+		if not _skOn then return end
+		local active={}
+		for _,p in ipairs(PL:GetPlayers()) do
+			if p==_lp then continue end
+			active[p.Name]=true
+			local char=p.Character
+			if not char then
+				if _skData[p.Name] then for _,f in ipairs(_skData[p.Name]) do f.Visible=false end end
+				continue
+			end
+			if not _skData[p.Name] then
+				local lines={}
+				for i=1,_MB do
+					local f=Instance.new("Frame")
+					f.BackgroundColor3=Color3.fromRGB(255,255,255)
+					f.BorderSizePixel=0
+					f.AnchorPoint=Vector2.new(0,0.5)
+					f.Visible=false
+					f.ZIndex=1
+					f.Parent=_skGui
+					lines[i]=f
+				end
+				_skData[p.Name]=lines
+			end
+			local bones=char:FindFirstChild("UpperTorso") and _R15B or _R6B
+			local fi=1
+			for _,bone in ipairs(bones) do
+				if fi>_MB then break end
+				local fr=_skData[p.Name][fi];fi=fi+1
+				local a=char:FindFirstChild(bone[1])
+				local b=char:FindFirstChild(bone[2])
+				if a and b then
+					local s1=_cam:WorldToScreenPoint(a.Position)
+					local s2=_cam:WorldToScreenPoint(b.Position)
+					if s1.Z>0 and s2.Z>0 then
+						local dx,dy=s2.X-s1.X,s2.Y-s1.Y
+						local len=math.sqrt(dx*dx+dy*dy)
+						if len>0.5 then
+							fr.Position=UDim2.new(0,s1.X,0,s1.Y)
+							fr.Size=UDim2.new(0,len,0,1)
+							fr.Rotation=math.deg(math.atan2(dy,dx))
+							fr.Visible=true
+							continue
+						end
+					end
+				end
+				fr.Visible=false
+			end
+			for i=fi,_MB do if _skData[p.Name][i] then _skData[p.Name][i].Visible=false end end
+		end
+		for pn,data in pairs(_skData) do
+			if not active[pn] then
+				for _,f in ipairs(data) do pcall(function() f:Destroy() end) end
+				_skData[pn]=nil
+			end
+		end
+	end)
+end
+
+local function _addNM(p)
+	if p==_lp then return end
+	task.spawn(function()
+		local char=p.Character or p.CharacterAdded:Wait()
+		if not _nmOn then return end
+		local head=char:WaitForChild("Head",5)
+		if not head or not _nmOn then return end
+		if _nmInsts[p.Name] then pcall(function() _nmInsts[p.Name]:Destroy() end) end
+		local bbg=Instance.new("BillboardGui")
+		bbg.Size=UDim2.new(0,120,0,20)
+		bbg.StudsOffset=Vector3.new(0,3,0)
+		bbg.AlwaysOnTop=true
+		bbg.Adornee=head
+		bbg.Parent=head
+		local lbl=Instance.new("TextLabel")
+		lbl.Size=UDim2.new(1,0,1,0)
+		lbl.BackgroundTransparency=1
+		lbl.Text=p.Name
+		lbl.TextColor3=Color3.fromRGB(255,255,255)
+		lbl.TextStrokeColor3=Color3.fromRGB(0,0,0)
+		lbl.TextStrokeTransparency=0
+		lbl.TextSize=13
+		lbl.Font=Enum.Font.GothamBold
+		lbl.Parent=bbg
+		_nmInsts[p.Name]=bbg
+	end)
+end
+local function _stopNM()
+	_nmOn=false
+	for _,c in pairs(_nmConns) do pcall(function() c:Disconnect() end) end
+	_nmConns={}
+	for _,b in pairs(_nmInsts) do pcall(function() b:Destroy() end) end
+	_nmInsts={}
+end
+local function _startNM()
+	_nmOn=true
+	for _,p in ipairs(PL:GetPlayers()) do
+		_addNM(p)
+		if _nmConns["c"..p.Name] then _nmConns["c"..p.Name]:Disconnect() end
+		_nmConns["c"..p.Name]=p.CharacterAdded:Connect(function()
+			if _nmOn then task.wait(0.5);_addNM(p) end
+		end)
+	end
+	_nmConns["pa"]=PL.PlayerAdded:Connect(function(p)
+		if not _nmOn then return end
+		_addNM(p)
+		_nmConns["c"..p.Name]=p.CharacterAdded:Connect(function()
+			if _nmOn then task.wait(0.5);_addNM(p) end
+		end)
+	end)
+	_nmConns["pr"]=PL.PlayerRemoving:Connect(function(p)
+		if _nmInsts[p.Name] then pcall(function() _nmInsts[p.Name]:Destroy() end);_nmInsts[p.Name]=nil end
+		if _nmConns["c"..p.Name] then _nmConns["c"..p.Name]:Disconnect();_nmConns["c"..p.Name]=nil end
+	end)
+end
+
+_G.__ehl=_stopHL
+_G.__esk=_stopSK
+_G.__enm=_stopNM
+
 local _vp=workspace.CurrentCamera.ViewportSize
 local _scl=math.clamp(_vp.X/1024,0.6,1.1)
 
@@ -200,11 +386,11 @@ local _us=Instance.new("UIScale")
 _us.Scale=_scl
 _us.Parent=_mf
 
-local _sk=Instance.new("UIStroke")
-_sk.Thickness=1.5
-_sk.Color=Color3.fromRGB(255,255,255)
-_sk.ApplyStrokeMode=Enum.ApplyStrokeMode.Border
-_sk.Parent=_mf
+local _msk=Instance.new("UIStroke")
+_msk.Thickness=1.5
+_msk.Color=Color3.fromRGB(255,255,255)
+_msk.ApplyStrokeMode=Enum.ApplyStrokeMode.Border
+_msk.Parent=_mf
 local _gr=Instance.new("UIGradient")
 _gr.Color=ColorSequence.new({
 	ColorSequenceKeypoint.new(0,_C.o),
@@ -212,7 +398,7 @@ _gr.Color=ColorSequence.new({
 	ColorSequenceKeypoint.new(0.6,Color3.fromRGB(18,7,0)),
 	ColorSequenceKeypoint.new(1,_C.o)
 })
-_gr.Parent=_sk
+_gr.Parent=_msk
 local _ga=0
 _G.__sg=RU.Heartbeat:Connect(function() _ga=(_ga+0.7)%360;_gr.Rotation=_ga end)
 
@@ -293,18 +479,18 @@ _tbl.BorderSizePixel=0
 _tbl.ZIndex=3
 _tbl.Parent=_tbr
 
-local _tabnames={"Auto","Trolls","Races","Misc"}
-local _tabX={8,65,122,179}
+local _tabnames={"Auto","Trolls","Races","Visuals","Misc"}
+local _tabX={8,53,98,143,188}
 local _tbns={}
 
-for i=1,4 do
+for i=1,5 do
 	local tb=Instance.new("TextButton")
-	tb.Size=UDim2.new(0,53,0,26)
+	tb.Size=UDim2.new(0,44,0,26)
 	tb.Position=UDim2.new(0,_tabX[i],0.5,-13)
 	tb.BackgroundColor3=i==1 and _C.o or _C.tbi
 	tb.Text=_tabnames[i]
 	tb.TextColor3=i==1 and Color3.fromRGB(255,255,255) or _C.st
-	tb.TextSize=10
+	tb.TextSize=9
 	tb.Font=Enum.Font.GothamBold
 	tb.BorderSizePixel=0
 	tb.AutoButtonColor=false
@@ -320,10 +506,12 @@ _cth.Position=UDim2.new(0,0,0,80)
 _cth.BackgroundTransparency=1
 _cth.Parent=_mf
 
-local _twF=TweenInfo.new(0.18,Enum.EasingStyle.Quad,Enum.EasingDirection.Out)
-local _twH=TweenInfo.new(0.12)
-local _twC=TweenInfo.new(0.25,Enum.EasingStyle.Quart,Enum.EasingDirection.Out)
-local _twL=TweenInfo.new(0.45,Enum.EasingStyle.Back,Enum.EasingDirection.Out)
+local _twF=TweenInfo.new(0.16,Enum.EasingStyle.Quint,Enum.EasingDirection.Out)
+local _twTog=TweenInfo.new(0.3,Enum.EasingStyle.Elastic,Enum.EasingDirection.Out)
+local _twH=TweenInfo.new(0.1)
+local _twC=TweenInfo.new(0.28,Enum.EasingStyle.Quint,Enum.EasingDirection.Out)
+local _twL=TweenInfo.new(0.5,Enum.EasingStyle.Back,Enum.EasingDirection.Out)
+local _twPr=TweenInfo.new(0.06)
 
 local function _mklbl(par,tx,yp)
 	local l=Instance.new("TextLabel")
@@ -335,13 +523,18 @@ local function _mklbl(par,tx,yp)
 	ln.Size=UDim2.new(1,-20,0,1);ln.Position=UDim2.new(0,10,0,yp+15)
 	ln.BackgroundColor3=_C.ol;ln.BorderSizePixel=0;ln.Parent=par
 end
-
 local function _mksep(par,yp)
 	local s=Instance.new("Frame")
 	s.Size=UDim2.new(1,-20,0,1);s.Position=UDim2.new(0,10,0,yp)
 	s.BackgroundColor3=Color3.fromRGB(22,9,0);s.BorderSizePixel=0;s.Parent=par
 end
-
+local function _mklblsm(par,tx,yp)
+	local l=Instance.new("TextLabel")
+	l.Size=UDim2.new(1,-20,0,12);l.Position=UDim2.new(0,10,0,yp)
+	l.BackgroundTransparency=1;l.Text=tx;l.TextColor3=_C.st
+	l.TextSize=9;l.Font=Enum.Font.Gotham
+	l.TextXAlignment=Enum.TextXAlignment.Left;l.Parent=par
+end
 local function _mktog(par,lbl,yp)
 	local btn=Instance.new("TextButton")
 	btn.Size=UDim2.new(1,-20,0,40);btn.Position=UDim2.new(0,10,0,yp)
@@ -365,7 +558,7 @@ local function _mktog(par,lbl,yp)
 	local function set(on)
 		_on=on
 		TS:Create(tr,_twF,{BackgroundColor3=on and _C.o or _C.t2}):Play()
-		TS:Create(kn,_twF,{
+		TS:Create(kn,_twTog,{
 			Position=on and UDim2.new(1,-17,0.5,-7) or UDim2.new(0,3,0.5,-7),
 			BackgroundColor3=on and Color3.fromRGB(255,255,255) or Color3.fromRGB(160,160,160)
 		}):Play()
@@ -377,9 +570,11 @@ local function _mktog(par,lbl,yp)
 	btn.MouseLeave:Connect(function()
 		TS:Create(btn,_twH,{BackgroundColor3=_on and _C.od or _C.t1}):Play()
 	end)
+	btn.MouseButton1Down:Connect(function()
+		TS:Create(btn,_twPr,{BackgroundColor3=_on and Color3.fromRGB(22,8,0) or Color3.fromRGB(16,16,16)}):Play()
+	end)
 	return btn,set
 end
-
 local function _mktxtbox(par,placeholder,yp)
 	local fl=Instance.new("Frame")
 	fl.Size=UDim2.new(1,-20,0,32);fl.Position=UDim2.new(0,10,0,yp)
@@ -400,19 +595,10 @@ local function _mktxtbox(par,placeholder,yp)
 	return box
 end
 
-local function _mklblsm(par,tx,yp)
-	local l=Instance.new("TextLabel")
-	l.Size=UDim2.new(1,-20,0,12);l.Position=UDim2.new(0,10,0,yp)
-	l.BackgroundTransparency=1;l.Text=tx;l.TextColor3=_C.st
-	l.TextSize=9;l.Font=Enum.Font.Gotham
-	l.TextXAlignment=Enum.TextXAlignment.Left;l.Parent=par
-end
-
 local _atf=Instance.new("Frame")
 _atf.Size=UDim2.new(1,0,0,_TH.auto-80)
 _atf.BackgroundTransparency=1
 _atf.Visible=true;_atf.Parent=_cth
-
 _mklbl(_atf,"AUTO FARMS",10)
 local _b1,_s1=_mktog(_atf,"Place 1",30)
 local _b2,_s2=_mktog(_atf,"Place 2",74)
@@ -425,7 +611,6 @@ local _trf=Instance.new("Frame")
 _trf.Size=UDim2.new(1,0,0,_TH.trolls-80)
 _trf.BackgroundTransparency=1
 _trf.Visible=false;_trf.Parent=_cth
-
 _mklbl(_trf,"TROLLS",10)
 local _bsr,_ssr=_mktog(_trf,"Soul Reap All",30)
 
@@ -433,19 +618,27 @@ local _rcf=Instance.new("Frame")
 _rcf.Size=UDim2.new(1,0,0,_TH.races-80)
 _rcf.BackgroundTransparency=1
 _rcf.Visible=false;_rcf.Parent=_cth
-
 _mklbl(_rcf,"RACES",10)
-_mklblsm(_rcf,"Target Race",32)
-local _raceTxt=_mktxtbox(_rcf,"e.g. Goblin",47)
-_mklblsm(_rcf,"Fire Speed (0.1 – 1.0s)",87)
+_mklblsm(_rcf,"Target Race(s) — comma separated",32)
+local _raceTxt=_mktxtbox(_rcf,"Split,Glitch,Zeus,Bob,Radioactive",47)
+_raceTxt.Text="Split,Glitch,Zeus,Bob,Radioactive"
+_mklblsm(_rcf,"Fire Speed (0.01 – 1.0s)",87)
 local _spdTxt=_mktxtbox(_rcf,"e.g. 0.3",102)
 local _brr,_srr=_mktog(_rcf,"Auto Roll",143)
+
+local _vsf=Instance.new("Frame")
+_vsf.Size=UDim2.new(1,0,0,_TH.visuals-80)
+_vsf.BackgroundTransparency=1
+_vsf.Visible=false;_vsf.Parent=_cth
+_mklbl(_vsf,"VISUALS",10)
+local _bhl,_shl=_mktog(_vsf,"Highlight",30)
+local _bsk,_ssk=_mktog(_vsf,"Skeleton",74)
+local _bnm,_snm=_mktog(_vsf,"Names",118)
 
 local _msf=Instance.new("Frame")
 _msf.Size=UDim2.new(1,0,0,_TH.misc-80)
 _msf.BackgroundTransparency=1
 _msf.Visible=false;_msf.Parent=_cth
-
 _mklbl(_msf,"MISC",10)
 local _bsf,_ssf=_mktog(_msf,"Safety Toggle",30)
 _ssf(true)
@@ -454,6 +647,7 @@ local _tcm={
 	{c=_atf,h=_TH.auto},
 	{c=_trf,h=_TH.trolls},
 	{c=_rcf,h=_TH.races},
+	{c=_vsf,h=_TH.visuals},
 	{c=_msf,h=_TH.misc}
 }
 local _ati,_col=1,false
@@ -472,8 +666,11 @@ local function _swt(idx)
 	end
 end
 
-for i=1,4 do
+for i=1,5 do
 	_tbns[i].MouseButton1Click:Connect(function() _swt(i) end)
+	_tbns[i].MouseButton1Down:Connect(function()
+		if i~=_ati then TS:Create(_tbns[i],_twPr,{BackgroundColor3=Color3.fromRGB(18,18,18)}):Play() end
+	end)
 	_tbns[i].MouseEnter:Connect(function()
 		if i~=_ati then TS:Create(_tbns[i],_twH,{BackgroundColor3=_C.tbh}):Play() end
 	end)
@@ -497,23 +694,25 @@ end)
 _bsr.MouseButton1Click:Connect(function() _sra=not _sra;_ssr(_sra) end)
 
 _brr.MouseButton1Click:Connect(function()
-	if _rra then
-		_rra=false
-		_srr(false)
-		return
+	if _rra then _rra=false;_srr(false);return end
+	local _raw=_raceTxt.Text:match("^%s*(.-)%s*$")
+	if not _raw or _raw=="" then return end
+	local _targets={}
+	for t in _raw:gmatch("[^,]+") do
+		local tr=t:match("^%s*(.-)%s*$")
+		if tr~="" then table.insert(_targets,tr:lower()) end
 	end
-	local _target=_raceTxt.Text:match("^%s*(.-)%s*$")
-	if not _target or _target=="" then return end
-	local _speed=math.clamp(tonumber(_spdTxt.Text) or 0.5,0.1,1.0)
-	_rra=true
-	_srr(true)
+	if #_targets==0 then return end
+	local _speed=math.clamp(tonumber(_spdTxt.Text) or 0.3,0.01,1.0)
+	_rra=true;_srr(true)
 	task.spawn(function()
 		while _rra do
 			local _cur=_getRace()
-			if _cur and _cur:lower()==_target:lower() then
-				_rra=false
-				_srr(false)
-				break
+			if _cur then
+				local _cl=_cur:lower()
+				for _,t in ipairs(_targets) do
+					if _cl==t then _rra=false;_srr(false);return end
+				end
 			end
 			pcall(function() RS:WaitForChild("RollRaceRF"):InvokeServer() end)
 			task.wait(_speed)
@@ -521,6 +720,21 @@ _brr.MouseButton1Click:Connect(function()
 	end)
 end)
 
+_bhl.MouseButton1Click:Connect(function()
+	_hlOn=not _hlOn
+	if _hlOn then _startHL() else _stopHL() end
+	_shl(_hlOn)
+end)
+_bsk.MouseButton1Click:Connect(function()
+	_skOn=not _skOn
+	if _skOn then _startSK() else _stopSK() end
+	_ssk(_skOn)
+end)
+_bnm.MouseButton1Click:Connect(function()
+	_nmOn=not _nmOn
+	if _nmOn then _startNM() else _stopNM() end
+	_snm(_nmOn)
+end)
 _bsf.MouseButton1Click:Connect(function() _so=not _so;_ssf(_so) end)
 
 _cob.MouseButton1Click:Connect(function()
@@ -528,7 +742,7 @@ _cob.MouseButton1Click:Connect(function()
 	TS:Create(_mf,_twC,{Size=UDim2.new(0,240,0,_col and _CH or _tcm[_ati].h)}):Play()
 	TS:Create(_cob,_twC,{Rotation=_col and 180 or 0}):Play()
 	if _col then
-		task.delay(0.25,function() if _col then _hfx.Visible=false end end)
+		task.delay(0.28,function() if _col then _hfx.Visible=false end end)
 	else
 		_hfx.Visible=true
 	end
