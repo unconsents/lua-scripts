@@ -66,16 +66,12 @@ local function _hookHealth(char)
 	local hum=char:WaitForChild("Humanoid",5)
 	if not hum then return end
 	hum:GetPropertyChangedSignal("Health"):Connect(function()
-		if hum.Health<50 then
-			_rfr()
-		end
+		if hum.Health<50 then _rfr() end
 	end)
 end
 
 local _initChar=workspace:FindFirstChild(_lp.Name)
-if _initChar then
-	task.spawn(function() _hookHealth(_initChar) end)
-end
+if _initChar then task.spawn(function() _hookHealth(_initChar) end) end
 
 _G.__sc=_lp.CharacterAdded:Connect(function(char)
 	task.spawn(function() _hookHealth(char) end)
@@ -117,7 +113,7 @@ task.spawn(function()
 	end
 end)
 
-local _cn={"CommonCrate","RareCrate","EpicCrate","MythicCrate","GodlyCrate"}
+local _cn={"CommonCrate","RareCrate","EpicCrate","MythicCrate","GodlyCrate","LegendaryCrate","SecretCrate"}
 local function _fcd(m) for _,v in ipairs(m:GetDescendants()) do if v:IsA("ClickDetector") then return v end end end
 local function _hrp() local c=_lp.Character;return c and c:FindFirstChild("HumanoidRootPart") or nil end
 local function _fza(s)
@@ -235,35 +231,24 @@ _dot.ZIndex=4
 _dot.Parent=_hdr
 Instance.new("UICorner",_dot).CornerRadius=UDim.new(1,0)
 
-local _ttl=Instance.new("TextLabel")
-_ttl.Size=UDim2.new(1,-80,0,18)
-_ttl.Position=UDim2.new(0,26,0,5)
-_ttl.BackgroundTransparency=1
-_ttl.Text="SPTS: Reimagined"
-_ttl.TextColor3=_C.o
-_ttl.TextSize=12
-_ttl.Font=Enum.Font.GothamBold
-_ttl.TextXAlignment=Enum.TextXAlignment.Left
-_ttl.ZIndex=4
-_ttl.Parent=_hdr
-
-local _pcl=Instance.new("TextLabel")
-_pcl.Size=UDim2.new(1,-80,0,12)
-_pcl.Position=UDim2.new(0,26,0,26)
-_pcl.BackgroundTransparency=1
-_pcl.RichText=true
-_pcl.Text="Players: <font color='#50ff50'>1</font>"
-_pcl.TextColor3=_C.o
-_pcl.TextSize=9
-_pcl.Font=Enum.Font.Gotham
-_pcl.TextXAlignment=Enum.TextXAlignment.Left
-_pcl.ZIndex=4
-_pcl.Parent=_hdr
+local _hrl=Instance.new("TextLabel")
+_hrl.Size=UDim2.new(1,-66,0,16)
+_hrl.Position=UDim2.new(0,26,0.5,-8)
+_hrl.BackgroundTransparency=1
+_hrl.RichText=true
+_hrl.Text="SPTS: Reimagined  <font color='#3a1400'>|</font>  Players: <font color='#50ff50'>1</font>"
+_hrl.TextColor3=_C.o
+_hrl.TextSize=12
+_hrl.Font=Enum.Font.GothamBold
+_hrl.TextXAlignment=Enum.TextXAlignment.Left
+_hrl.TextTruncate=Enum.TextTruncate.AtEnd
+_hrl.ZIndex=4
+_hrl.Parent=_hdr
 
 task.spawn(function()
 	while _gui.Parent do
 		local n=#PL:GetPlayers()
-		_pcl.Text="Players: <font color='#50ff50'>"..n.."</font>"
+		_hrl.Text="SPTS: Reimagined  <font color='#3a1400'>|</font>  Players: <font color='#50ff50'>"..n.."</font>"
 		task.wait(3)
 	end
 end)
