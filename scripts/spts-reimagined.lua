@@ -15,9 +15,10 @@ local _C={
 	t1=Color3.fromRGB(24,24,24),t2=Color3.fromRGB(42,42,42),
 	tx=Color3.fromRGB(225,225,225),st=Color3.fromRGB(120,120,120),
 	tbi=Color3.fromRGB(26,26,26),tbh=Color3.fromRGB(36,36,36),
+	tb=Color3.fromRGB(18,18,18),
 }
 
-local _TH={auto=323,trolls=162,misc=162}
+local _TH={auto=323,trolls=162,races=275,misc=162}
 local _CH=44
 
 local _D={
@@ -25,7 +26,7 @@ local _D={
 	p2={t=Vector3.new(49.16473388671875,246.24708557128906,-503.34759521484375),e=Vector3.new(51.71800994873047,246.24708557128906,-481.5979919433594)}
 }
 
-local _am,_dt,_ca,_so,_scp,_sra="none","p1",false,true,nil,false
+local _am,_dt,_ca,_so,_scp,_sra,_rra="none","p1",false,true,nil,false,false
 
 local function _tgt()
 	if _am=="p1" then return _D.p1
@@ -166,6 +167,15 @@ local function _stcr()
 end
 local function _spcr() _ca=false;_fza(false) end
 
+local function _getRace()
+	local rg=_lp.PlayerGui:FindFirstChild("RaceRollGui");if not rg then return nil end
+	local m=rg:FindFirstChild("Main");if not m then return nil end
+	local l=m:FindFirstChild("CurrentRaceLabel");if not l then return nil end
+	local r=l.Text:match(":%s*(.-)%s*|")
+	if r then return r:match("^%s*(.-)%s*$") end
+	return nil
+end
+
 local _vp=workspace.CurrentCamera.ViewportSize
 local _scl=math.clamp(_vp.X/1024,0.6,1.1)
 
@@ -283,13 +293,13 @@ _tbl.BorderSizePixel=0
 _tbl.ZIndex=3
 _tbl.Parent=_tbr
 
-local _tabnames={"Auto","Trolls","Misc"}
-local _tabX={8,84,160}
+local _tabnames={"Auto","Trolls","Races","Misc"}
+local _tabX={8,65,122,179}
 local _tbns={}
 
-for i=1,3 do
+for i=1,4 do
 	local tb=Instance.new("TextButton")
-	tb.Size=UDim2.new(0,72,0,26)
+	tb.Size=UDim2.new(0,53,0,26)
 	tb.Position=UDim2.new(0,_tabX[i],0.5,-13)
 	tb.BackgroundColor3=i==1 and _C.o or _C.tbi
 	tb.Text=_tabnames[i]
@@ -370,6 +380,34 @@ local function _mktog(par,lbl,yp)
 	return btn,set
 end
 
+local function _mktxtbox(par,placeholder,yp)
+	local fl=Instance.new("Frame")
+	fl.Size=UDim2.new(1,-20,0,32);fl.Position=UDim2.new(0,10,0,yp)
+	fl.BackgroundColor3=_C.tb;fl.BorderSizePixel=0;fl.Parent=par
+	Instance.new("UICorner",fl).CornerRadius=UDim.new(0,8)
+	local fsk=Instance.new("UIStroke")
+	fsk.Color=Color3.fromRGB(40,16,0);fsk.Thickness=1;fsk.Parent=fl
+	local box=Instance.new("TextBox")
+	box.Size=UDim2.new(1,-16,1,0);box.Position=UDim2.new(0,8,0,0)
+	box.BackgroundTransparency=1;box.BorderSizePixel=0
+	box.Text="";box.PlaceholderText=placeholder
+	box.TextColor3=_C.tx;box.PlaceholderColor3=_C.st
+	box.TextSize=11;box.Font=Enum.Font.Gotham
+	box.TextXAlignment=Enum.TextXAlignment.Left
+	box.ClearTextOnFocus=false;box.Parent=fl
+	box.Focused:Connect(function() TS:Create(fsk,_twH,{Color=_C.o}):Play() end)
+	box.FocusLost:Connect(function() TS:Create(fsk,_twH,{Color=Color3.fromRGB(40,16,0)}):Play() end)
+	return box
+end
+
+local function _mklblsm(par,tx,yp)
+	local l=Instance.new("TextLabel")
+	l.Size=UDim2.new(1,-20,0,12);l.Position=UDim2.new(0,10,0,yp)
+	l.BackgroundTransparency=1;l.Text=tx;l.TextColor3=_C.st
+	l.TextSize=9;l.Font=Enum.Font.Gotham
+	l.TextXAlignment=Enum.TextXAlignment.Left;l.Parent=par
+end
+
 local _atf=Instance.new("Frame")
 _atf.Size=UDim2.new(1,0,0,_TH.auto-80)
 _atf.BackgroundTransparency=1
@@ -391,6 +429,18 @@ _trf.Visible=false;_trf.Parent=_cth
 _mklbl(_trf,"TROLLS",10)
 local _bsr,_ssr=_mktog(_trf,"Soul Reap All",30)
 
+local _rcf=Instance.new("Frame")
+_rcf.Size=UDim2.new(1,0,0,_TH.races-80)
+_rcf.BackgroundTransparency=1
+_rcf.Visible=false;_rcf.Parent=_cth
+
+_mklbl(_rcf,"RACES",10)
+_mklblsm(_rcf,"Target Race",32)
+local _raceTxt=_mktxtbox(_rcf,"e.g. Goblin",47)
+_mklblsm(_rcf,"Fire Speed (0.1 – 1.0s)",87)
+local _spdTxt=_mktxtbox(_rcf,"e.g. 0.3",102)
+local _brr,_srr=_mktog(_rcf,"Auto Roll",143)
+
 local _msf=Instance.new("Frame")
 _msf.Size=UDim2.new(1,0,0,_TH.misc-80)
 _msf.BackgroundTransparency=1
@@ -403,6 +453,7 @@ _ssf(true)
 local _tcm={
 	{c=_atf,h=_TH.auto},
 	{c=_trf,h=_TH.trolls},
+	{c=_rcf,h=_TH.races},
 	{c=_msf,h=_TH.misc}
 }
 local _ati,_col=1,false
@@ -421,7 +472,7 @@ local function _swt(idx)
 	end
 end
 
-for i=1,3 do
+for i=1,4 do
 	_tbns[i].MouseButton1Click:Connect(function() _swt(i) end)
 	_tbns[i].MouseEnter:Connect(function()
 		if i~=_ati then TS:Create(_tbns[i],_twH,{BackgroundColor3=_C.tbh}):Play() end
@@ -444,6 +495,32 @@ _bc.MouseButton1Click:Connect(function()
 	if _ca then _spcr();_sct(false) else _stcr();_sct(true) end
 end)
 _bsr.MouseButton1Click:Connect(function() _sra=not _sra;_ssr(_sra) end)
+
+_brr.MouseButton1Click:Connect(function()
+	if _rra then
+		_rra=false
+		_srr(false)
+		return
+	end
+	local _target=_raceTxt.Text:match("^%s*(.-)%s*$")
+	if not _target or _target=="" then return end
+	local _speed=math.clamp(tonumber(_spdTxt.Text) or 0.5,0.1,1.0)
+	_rra=true
+	_srr(true)
+	task.spawn(function()
+		while _rra do
+			local _cur=_getRace()
+			if _cur and _cur:lower()==_target:lower() then
+				_rra=false
+				_srr(false)
+				break
+			end
+			pcall(function() RS:WaitForChild("RollRaceRF"):InvokeServer() end)
+			task.wait(_speed)
+		end
+	end)
+end)
+
 _bsf.MouseButton1Click:Connect(function() _so=not _so;_ssf(_so) end)
 
 _cob.MouseButton1Click:Connect(function()
