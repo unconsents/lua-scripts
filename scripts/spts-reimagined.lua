@@ -4,13 +4,13 @@ local RS,PL,RU,TS,UI=_svc.ReplicatedStorage,_svc.Players,_svc.RunService,_svc.Tw
 local _re=RS:WaitForChild("RemoteEvents")
 local _lp=PL.LocalPlayer
 local _pg=_lp:WaitForChild("PlayerGui")
-local _cam=workspace.CurrentCamera
 
 if _G.__sc then _G.__sc:Disconnect() end
 if _G.__sg then _G.__sg:Disconnect() end
 if _G.__si and _G.__si.Parent then _G.__si:Destroy() end
 if _G.__ehl then pcall(_G.__ehl) end
 if _G.__enm then pcall(_G.__enm) end
+if _G.__esk then pcall(_G.__esk) end
 
 local _C={
 	o=Color3.fromRGB(255,120,0),od=Color3.fromRGB(35,15,0),ol=Color3.fromRGB(50,20,0),
@@ -21,12 +21,13 @@ local _C={
 	tb=Color3.fromRGB(18,18,18),
 }
 
-local _TH={auto=323,trolls=162,races=275,visuals=206,misc=162}
+local _TH={auto=367,trolls=162,races=275,visuals=206,misc=162}
 local _CH=44
 
 local _D={
 	p1={t=Vector3.new(-470.38555908203125,246.18482971191406,939.3289794921875),e=Vector3.new(-565.4944458007812,246.19100952148438,946.260986328125)},
-	p2={t=Vector3.new(49.16473388671875,246.24708557128906,-503.34759521484375),e=Vector3.new(51.71800994873047,246.24708557128906,-481.5979919433594)}
+	p2={t=Vector3.new(49.16473388671875,246.24708557128906,-503.34759521484375),e=Vector3.new(51.71800994873047,246.24708557128906,-481.5979919433594)},
+	p3={t=Vector3.new(-127.43701171875,308.38665771484375,232.02139282226562),e=Vector3.new(-127.35542297363281,313.3047790527344,237.951416015625)}
 }
 
 local _am,_dt,_ca,_so,_scp,_sra,_rra="none","p1",false,true,nil,false,false
@@ -36,6 +37,7 @@ local _nmOn,_nmConns,_nmInsts=false,{},{}
 local function _tgt()
 	if _am=="p1" then return _D.p1
 	elseif _am=="p2" then return _D.p2
+	elseif _am=="p3" then return _D.p3
 	elseif _am=="dual" then return _D[_dt] end
 	return nil
 end
@@ -76,7 +78,14 @@ if _ic then task.spawn(function() _hookHealth(_ic) end) end
 _G.__sc=_lp.CharacterAdded:Connect(function(c) task.spawn(function() _hookHealth(c) end) end)
 
 task.spawn(function()
-	while true do task.wait(2);if _am=="dual" then _dt=_dt=="p1" and "p2" or "p1" end end
+	while true do
+		task.wait(2)
+		if _am=="dual" then
+			if _dt=="p1" then _dt="p2"
+			elseif _dt=="p2" then _dt="p3"
+			else _dt="p1" end
+		end
+	end
 end)
 task.spawn(function()
 	while true do
@@ -511,12 +520,13 @@ _atf.Size=UDim2.new(1,0,0,_TH.auto-80)
 _atf.BackgroundTransparency=1
 _atf.Visible=true;_atf.Parent=_cth
 _mklbl(_atf,"AUTO FARMS",10)
-local _b1,_s1=_mktog(_atf,"Place 1",30)
-local _b2,_s2=_mktog(_atf,"Place 2",74)
-local _bd,_sd=_mktog(_atf,"Dual Farm",118)
-_mksep(_atf,163)
-_mklbl(_atf,"CRATES",171)
-local _bc,_sct=_mktog(_atf,"Auto Crates",191)
+local _b1,_s1=_mktog(_atf,"ruzgar",30)
+local _b2,_s2=_mktog(_atf,"Weak",74)
+local _b3,_s3=_mktog(_atf,"campergun",118)
+local _bd,_sd=_mktog(_atf,"Dual Farm",162)
+_mksep(_atf,207)
+_mklbl(_atf,"CRATES",215)
+local _bc,_sct=_mktog(_atf,"Auto Crates",235)
 
 local _trf=Instance.new("Frame")
 _trf.Size=UDim2.new(1,0,0,_TH.trolls-80)
@@ -591,11 +601,13 @@ end
 
 local function _setm(m)
 	if m~="none" and _ca then _spcr();_sct(false) end
-	_am=m;_s1(m=="p1");_s2(m=="p2");_sd(m=="dual")
+	_am=m
+	_s1(m=="p1");_s2(m=="p2");_s3(m=="p3");_sd(m=="dual")
 end
 
 _b1.MouseButton1Click:Connect(function() _setm(_am=="p1" and "none" or "p1") end)
 _b2.MouseButton1Click:Connect(function() _setm(_am=="p2" and "none" or "p2") end)
+_b3.MouseButton1Click:Connect(function() _setm(_am=="p3" and "none" or "p3") end)
 _bd.MouseButton1Click:Connect(function() _setm(_am=="dual" and "none" or "dual") end)
 _bc.MouseButton1Click:Connect(function()
 	if not _ca and _am~="none" then return end
