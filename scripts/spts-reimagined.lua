@@ -10,7 +10,6 @@ if _G.__sc then _G.__sc:Disconnect() end
 if _G.__sg then _G.__sg:Disconnect() end
 if _G.__si and _G.__si.Parent then _G.__si:Destroy() end
 if _G.__ehl then pcall(_G.__ehl) end
-if _G.__esk then pcall(_G.__esk) end
 if _G.__enm then pcall(_G.__enm) end
 
 local _C={
@@ -22,7 +21,7 @@ local _C={
 	tb=Color3.fromRGB(18,18,18),
 }
 
-local _TH={auto=323,trolls=162,races=275,visuals=250,misc=162}
+local _TH={auto=323,trolls=162,races=275,visuals=206,misc=162}
 local _CH=44
 
 local _D={
@@ -32,7 +31,6 @@ local _D={
 
 local _am,_dt,_ca,_so,_scp,_sra,_rra="none","p1",false,true,nil,false,false
 local _hlOn,_hlConns,_hlInsts=false,{},{}
-local _skOn,_skRconn,_skGui,_skData=false,nil,nil,{}
 local _nmOn,_nmConns,_nmInsts=false,{},{}
 
 local function _tgt()
@@ -101,7 +99,7 @@ end)
 task.spawn(function()
 	while true do
 		task.wait()
-		if _sra and _chk() then
+		if _sra then
 			for _,p in ipairs(PL:GetPlayers()) do
 				local chr=p.Character
 				if chr then pcall(function() _re:WaitForChild("UseSkill"):FireServer("SoulReap",chr) end) end
@@ -181,6 +179,7 @@ local function _addHL(p)
 		hl.FillTransparency=1
 		hl.OutlineTransparency=0
 		hl.OutlineColor=Color3.fromRGB(255,255,255)
+		hl.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
 		hl.Adornee=char
 		hl.Parent=char
 		_hlInsts[p.Name]=hl
@@ -212,93 +211,6 @@ local function _startHL()
 	_hlConns["pr"]=PL.PlayerRemoving:Connect(function(p)
 		if _hlInsts[p.Name] then pcall(function() _hlInsts[p.Name]:Destroy() end);_hlInsts[p.Name]=nil end
 		if _hlConns["c"..p.Name] then _hlConns["c"..p.Name]:Disconnect();_hlConns["c"..p.Name]=nil end
-	end)
-end
-
-local _R15B={
-	{"Head","UpperTorso"},{"UpperTorso","LowerTorso"},
-	{"UpperTorso","LeftUpperArm"},{"LeftUpperArm","LeftLowerArm"},{"LeftLowerArm","LeftHand"},
-	{"UpperTorso","RightUpperArm"},{"RightUpperArm","RightLowerArm"},{"RightLowerArm","RightHand"},
-	{"LowerTorso","LeftUpperLeg"},{"LeftUpperLeg","LeftLowerLeg"},{"LeftLowerLeg","LeftFoot"},
-	{"LowerTorso","RightUpperLeg"},{"RightUpperLeg","RightLowerLeg"},{"RightLowerLeg","RightFoot"},
-}
-local _R6B={
-	{"Head","Torso"},{"Torso","Left Arm"},{"Torso","Right Arm"},
-	{"Torso","Left Leg"},{"Torso","Right Leg"},
-}
-local _MB=20
-
-local function _stopSK()
-	_skOn=false
-	if _skRconn then _skRconn:Disconnect();_skRconn=nil end
-	if _skGui then _skGui:Destroy();_skGui=nil end
-	_skData={}
-end
-local function _startSK()
-	_skOn=true
-	_skGui=Instance.new("ScreenGui")
-	_skGui.Name="__sk"..tostring(math.random(100,999))
-	_skGui.ResetOnSpawn=false
-	_skGui.ZIndexBehavior=Enum.ZIndexBehavior.Sibling
-	_skGui.IgnoreGuiInset=true
-	_skGui.Parent=_pg
-	_skRconn=RU.RenderStepped:Connect(function()
-		if not _skOn then return end
-		local active={}
-		for _,p in ipairs(PL:GetPlayers()) do
-			if p==_lp then continue end
-			active[p.Name]=true
-			local char=p.Character
-			if not char then
-				if _skData[p.Name] then for _,f in ipairs(_skData[p.Name]) do f.Visible=false end end
-				continue
-			end
-			if not _skData[p.Name] then
-				local lines={}
-				for i=1,_MB do
-					local f=Instance.new("Frame")
-					f.BackgroundColor3=Color3.fromRGB(255,255,255)
-					f.BorderSizePixel=0
-					f.AnchorPoint=Vector2.new(0,0.5)
-					f.Visible=false
-					f.ZIndex=1
-					f.Parent=_skGui
-					lines[i]=f
-				end
-				_skData[p.Name]=lines
-			end
-			local bones=char:FindFirstChild("UpperTorso") and _R15B or _R6B
-			local fi=1
-			for _,bone in ipairs(bones) do
-				if fi>_MB then break end
-				local fr=_skData[p.Name][fi];fi=fi+1
-				local a=char:FindFirstChild(bone[1])
-				local b=char:FindFirstChild(bone[2])
-				if a and b then
-					local s1=_cam:WorldToScreenPoint(a.Position)
-					local s2=_cam:WorldToScreenPoint(b.Position)
-					if s1.Z>0 and s2.Z>0 then
-						local dx,dy=s2.X-s1.X,s2.Y-s1.Y
-						local len=math.sqrt(dx*dx+dy*dy)
-						if len>0.5 then
-							fr.Position=UDim2.new(0,s1.X,0,s1.Y)
-							fr.Size=UDim2.new(0,len,0,1)
-							fr.Rotation=math.deg(math.atan2(dy,dx))
-							fr.Visible=true
-							continue
-						end
-					end
-				end
-				fr.Visible=false
-			end
-			for i=fi,_MB do if _skData[p.Name][i] then _skData[p.Name][i].Visible=false end end
-		end
-		for pn,data in pairs(_skData) do
-			if not active[pn] then
-				for _,f in ipairs(data) do pcall(function() f:Destroy() end) end
-				_skData[pn]=nil
-			end
-		end
 	end)
 end
 
@@ -359,7 +271,6 @@ local function _startNM()
 end
 
 _G.__ehl=_stopHL
-_G.__esk=_stopSK
 _G.__enm=_stopNM
 
 local _vp=workspace.CurrentCamera.ViewportSize
@@ -632,8 +543,7 @@ _vsf.BackgroundTransparency=1
 _vsf.Visible=false;_vsf.Parent=_cth
 _mklbl(_vsf,"VISUALS",10)
 local _bhl,_shl=_mktog(_vsf,"Highlight",30)
-local _bsk,_ssk=_mktog(_vsf,"Skeleton",74)
-local _bnm,_snm=_mktog(_vsf,"Names",118)
+local _bnm,_snm=_mktog(_vsf,"Names",74)
 
 local _msf=Instance.new("Frame")
 _msf.Size=UDim2.new(1,0,0,_TH.misc-80)
@@ -724,11 +634,6 @@ _bhl.MouseButton1Click:Connect(function()
 	_hlOn=not _hlOn
 	if _hlOn then _startHL() else _stopHL() end
 	_shl(_hlOn)
-end)
-_bsk.MouseButton1Click:Connect(function()
-	_skOn=not _skOn
-	if _skOn then _startSK() else _stopSK() end
-	_ssk(_skOn)
 end)
 _bnm.MouseButton1Click:Connect(function()
 	_nmOn=not _nmOn
